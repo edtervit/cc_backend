@@ -16,7 +16,8 @@ return new class extends Migration
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
             $table->string('message');
-            $table->enum('type', ['photography', 'general']);
+            $table->tinyText('type');
+            $table->boolean('is_oblique');
             $table->timestamps();
             $table->softDeletes();
         });

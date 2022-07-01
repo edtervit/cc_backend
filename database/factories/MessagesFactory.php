@@ -19,7 +19,8 @@ class MessagesFactory extends Factory
     {
         return [
             'message' => $this->faker->sentence(),
-            'type' => Messages::ALL_MESSAGE_TYPES[rand(0,1)]
+            'type' => Messages::ALL_MESSAGE_TYPES[rand(0, 1)],
+            'is_oblique' => (bool)rand(0, 1),
         ];
     }
 }
