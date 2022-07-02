@@ -7,6 +7,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class Messages extends Model
 {
+    protected $fillable = ['message', 'is_oblique', 'type'];
+
     use HasFactory;
     const MESSAGE_TYPE_GENERAL = 'general';
     const MESSAGE_TYPE_PHOTOGRAPHY = 'photography';
