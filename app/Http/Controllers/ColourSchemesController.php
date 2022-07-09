@@ -54,10 +54,22 @@ class ColourSchemesController extends Controller
         $response = $client->request('GET', $amount . '?schemes_size_limit=5', ['headers' => $headers]);
         $data = json_decode($response->getBody(), true);
 
-        foreach ($data['schemes'] as $scheme) {
-            # code..
-            $scheme['colors'];
+        $chunks = array_chunk($data['schemes'], 100);
+
+        foreach ($chunks as $chunk) {
+            foreach ($chunk as  $scheme) {
+                $coloursArr = $scheme['colors'];
+                if (count($coloursArr) === 5) {
+                    ColourSchemes::firstOrCreate([
+                        'colour_1' => $coloursArr[0],
+                        'colour_2' => $coloursArr[1],
+                        'colour_3' => $coloursArr[2],
+                        'colour_4' => $coloursArr[3],
+                        'colour_5' => $coloursArr[4],
+                    ]);
+                }
+            }
         }
-        return $data['schemes'];
+        return ColourSchemes::all();
     }
 }

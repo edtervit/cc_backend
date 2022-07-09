@@ -25,5 +25,6 @@ Route::get('messages', [MessagesController::class, 'getMessages']);
 
 //colours
 Route::get('color-schemes', [ColourSchemesController::class, 'getColours']);
-//make protected route
-Route::get('color-schemes/scrape', [ColourSchemesController::class, 'scrapeColourSchemes']);
+
+//keep disabled on prod until auth ready
+// Route::get('color-schemes/scrape', [ColourSchemesController::class, 'scrapeColourSchemes']);
