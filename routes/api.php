@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ColourSchemesController;
 use App\Http\Controllers\MessagesController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -21,3 +22,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 //messages
 Route::get('messages', [MessagesController::class, 'getMessages']);
+
+//colours
+Route::get('color-schemes', [ColourSchemesController::class, 'getColours']);
+
+//keep disabled on prod until auth ready
+// Route::get('color-schemes/scrape', [ColourSchemesController::class, 'scrapeColourSchemes']);
