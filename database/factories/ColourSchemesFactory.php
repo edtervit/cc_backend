@@ -17,11 +17,11 @@ class ColourSchemesFactory extends Factory
     public function definition()
     {
         return [
-            'colour_1' => $this->faker->hexColor,
-            'colour_2' => $this->faker->hexColor,
-            'colour_3' => $this->faker->hexColor,
-            'colour_4' => $this->faker->hexColor,
-            'colour_5' => $this->faker->hexColor,
+            'colour_1' => substr($this->faker->hexColor, 1),
+            'colour_2' => substr($this->faker->hexColor, 1),
+            'colour_3' => substr($this->faker->hexColor, 1),
+            'colour_4' => substr($this->faker->hexColor, 1),
+            'colour_5' => substr($this->faker->hexColor, 1),
         ];
     }
 }
