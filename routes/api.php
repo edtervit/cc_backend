@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ColourSchemesController;
 use App\Http\Controllers\MessagesController;
+use App\Http\Controllers\SubjectsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -25,6 +26,9 @@ Route::get('messages', [MessagesController::class, 'getMessages']);
 
 //colours
 Route::get('colour-schemes', [ColourSchemesController::class, 'getColours']);
+
+//subjects
+Route::get('subjects', [SubjectsController::class, 'getSubjects']);
 
 //keep disabled on prod until auth ready
 // Route::get('color-schemes/scrape', [ColourSchemesController::class, 'scrapeColourSchemes']);
