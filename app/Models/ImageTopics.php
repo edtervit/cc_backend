@@ -11,6 +11,6 @@ class ImageTopics extends Model
 
     public function images()
     {
-        return $this->belongsToMany(Image::class);
+        return $this->belongsToMany(Image::class, 'image_image_topic', 'image_topic_id', 'image_id');
     }
 }

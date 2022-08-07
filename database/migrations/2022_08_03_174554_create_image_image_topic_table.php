@@ -16,8 +16,12 @@ return new class extends Migration
     {
         Schema::create('image_image_topic', function (Blueprint $table) {
             $table->id();
-            $table->integer('image_id')->unsigned();
-            $table->integer('image_topic_id')->unsigned();
+            $table->unsignedBigInteger('image_id');
+            $table->unsignedBigInteger('image_topic_id');
+            $table->foreign('image_id')->references('id')->on('images')
+                ->onDelete('cascade');
+            $table->foreign('image_topic_id')->references('id')->on('image_topics')
+                ->onDelete('cascade');
             $table->timestamps();
         });
     }

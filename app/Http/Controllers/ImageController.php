@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\Image;
 use App\Models\ImageTopics;
-use Illuminate\Http\Request;
 use GuzzleHttp\Client;
-use Illuminate\Support\Facades\DB;
+use GuzzleHttp\Pool;
+use GuzzleHttp\Psr7\Request as Psr7Request;
+use GuzzleHttp\Psr7\Response;
+
 
 class ImageController extends Controller
 {
@@ -30,6 +32,9 @@ class ImageController extends Controller
         $skipUnsplashApiCall = $request->input('skipUnsplashApiCall');
         $limit = $request->input('limit');
 
+        //when calling unsplash api, how many pages shall we go through (max 30 images per page);
+        //currently 5 because of limits we have on the trial account.
+        $maxAmountOfExtraPageAPICalls = 5;
 
         $headers = [
             'User-agent' => 'Mozilla/5.0',
@@ -42,71 +47,103 @@ class ImageController extends Controller
         // Create a client with a base URI
         $client = new Client(['base_uri' => 'https://api.unsplash.com/']);
 
-        // $response = $client->request('GET', 'topics/animals/photos/?per_page=3&order_by=popular', ['headers' => $headers]);
-        $response = $client->request('GET', '/search/photos?per_page=3&order_by=relevant&color=orange&query=%20', ['headers' => $headers]);
-
-        $data = json_decode($response->getBody(), true);
-        return $data;
-        //first try to to call unsplash api, if no requests left just serve what we have from db, 
-
-        function insertNewData($arrayOfPhotos)
-        {
-            foreach ($arrayOfPhotos as $image) {
-
-                //check if image already exists in our db: 
-                $exists = Image::where('unsplash_id', '=', $image['id'])->first();
-
-                if ($exists) continue;
-
-                $createdImage = Image::firstOrCreate([
-                    'url' => $image['urls']['regular'],
-                    'description' => $image['alt_description'] ?? $image['description'] ?? null,
-                    'orientation' => Image::orientationChecker($image['width'], $image['height'], 10),
-                    'artist_name' => $image['user']['name'],
-                    'artist_profile_url' => $image['user']['links']['html'],
-                    'unsplash_id' => $image['id'],
-                ]);
-
-                //assign the topic
-                if (count($image['topic_submissions']) > 0) {
-                    $topicSlugs = array_keys($image['topic_submissions']);
-                    foreach ($topicSlugs as $slug) {
-                        //check if we have that slug in db
-                        $topicWeHave = ImageTopics::where('slug', '=', $slug)->first();
-                        if ($topicWeHave) {
-                            DB::table('image_image_topic')->insert([
-                                'image_id' => $createdImage->id,
-                                'image_topic_id' => $topicWeHave->id
-                            ]);
-                        }
-                    }
-                }
-
-                //ccheck for image colour propery and assign
-
-            }
-            return 'test';
-        }
-
-        //no topic - no colour 
-        if (!isset($topic) && !isset($colour) && !$skipUnsplashApiCall) {
-
-            $response = $client->request('GET', 'photos?per_page=20&order_by=popular', ['headers' => $headers]);
-            $data = json_decode($response->getBody(), true);
-            // insertNewData($data);
-            return $data;
-            return 'no topic or colour';
+        $isSearchEndpoint = false;
+        //no topic - no colour
+        if (!isset($topic) && !isset($colour)) {
+            $url = 'photos?per_page=30&order_by=popular';
         }
 
         //topic only
-
+        if (isset($topic) && !isset($colour)) {
+            $url = 'topics/' . $topic . '/photos/?per_page=30&page=100&order_by=popular&orientation=' . $orientation;
+        }
 
         //colour only
+        if (!isset($topic) && isset($colour)) {
+            $url = '/search/photos?per_page=30&order_by=relevant&query=' . $colour . '&orientation=' . $orientation;
+            $isSearchEndpoint = true;
+        }
 
-        //colour + topic 
+        //colour + topic
+        if (isset($topic) && isset($colour)) {
+            $url = '/search/photos?per_page=30&order_by=relevant&color=' . $colour . '&orientation=' . $orientation . '&query=' . $topic;
+            $isSearchEndpoint = true;
+        }
 
+        //make the request
+        if (!$skipUnsplashApiCall && $url) {
+            $errorInRequest = false;
+            try {
+                $response = $client->request('GET', $url, ['headers' => $headers]);
+            } catch (\Throwable $th) {
+                $errorInRequest = true;
+            }
 
-        // return $data;
-        return 'woops';
+            if (!$errorInRequest) {
+                $data = json_decode($response->getBody(), true);
+
+                if (!$isSearchEndpoint) Image::insertArryOfImagesFromUnsplashApi($data);
+
+                if ($isSearchEndpoint) {
+                    if (count($data['results']) > 0) Image::insertArryOfImagesFromUnsplashApi($data['results'], $colour);
+                }
+
+                //if there is more than one page of results then get all pages.
+                if ($response->hasHeader('X-Total') && $response->hasHeader('X-Per-Page')) {
+                    $amountOfResults = $response->getHeader('X-Total')[0];
+                    $perPage = $response->getHeader('X-Per-Page')[0];
+
+                    //round up
+                    $amountOfPages = ceil($amountOfResults / $perPage);
+                    if ($amountOfPages > 1) {
+                        //if more than one page
+                        $requests = function ($total, $headers, $url, $maxAmountOfExtraPageAPICalls) {
+                            // run whichever is bigger, total amount of pages or the max amount to call.
+                            $totalToRun = $total <= $maxAmountOfExtraPageAPICalls ? $total : $maxAmountOfExtraPageAPICalls;
+                            for ($i = 2; $i <= $totalToRun; $i++) {
+                                $uri = $url . '&page=' . $i;
+                                yield new Psr7Request('GET', $uri, $headers);
+                            }
+                        };
+
+                        $pool = new Pool($client, $requests($amountOfPages, $headers, $url, $maxAmountOfExtraPageAPICalls), [
+                            'concurrency' => 5,
+                            'fulfilled' => function (Response $response) use ($colour, $isSearchEndpoint) {
+                                //pass
+                                $data = json_decode($response->getBody(), true);
+                                if ($isSearchEndpoint) {
+                                    if (count($data['results']) > 0) Image::insertArryOfImagesFromUnsplashApi($data['results'], $colour);
+                                }
+                                if (!$isSearchEndpoint) Image::insertArryOfImagesFromUnsplashApi($data);
+                            },
+                        ]);
+                        $promise = $pool->promise();
+                        $promise->wait();
+                    }
+                }
+            }
+        }
+
+        //orientation
+        $images = Image::where('orientation', '=', $orientation);
+
+        //Colour
+        if(isset($colour)){
+            $images = $images->where('colour', '=', $colour);
+        }
+
+        //topic
+        if(isset($topic)){
+            $imageTopic = ImageTopics::where('slug', '=', $topic)->firstOrFail();
+            $imagesWithTopicIds = $imageTopic->images()->get()->pluck('id');
+            $images = $images->whereIn('id', $imagesWithTopicIds);
+        }
+
+        //limit
+        if(isset($limit)){
+            $images = $images->inRandomOrder()->take($limit);
+        }
+
+        return $images->with('imageTopics')->get();
     }
 }
