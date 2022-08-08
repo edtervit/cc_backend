@@ -23,13 +23,16 @@ class ImageController extends Controller
             'colour' =>  ['string', 'in:"' . implode('", "', Image::ALL_IMAGE_COLOURS) . '"'],
             'orientation' =>  ['string', 'required', 'in:"' . implode('", "', Image::ALL_IMAGE_ORIENTATIONS) . '"'],
             'limit' => 'integer',
-            'skipUnsplashApiCall' => ['boolean', 'required']
+            'skipUnsplashApiCall' => ['boolean', 'required'],
+            'mustIncludeTheseImages' => 'array',
+            'mustIncludeTheseImages.*' => 'integer',
         ]);
 
         $topic = $request->input('topic');
         $colour = $request->input('colour');
         $orientation = $request->input('orientation');
         $skipUnsplashApiCall = $request->input('skipUnsplashApiCall');
+        $mustIncludeTheseImages = $request->input('mustIncludeTheseImages');
         $limit = $request->input('limit');
 
         //when calling unsplash api, how many pages shall we go through (max 30 images per page);
@@ -144,6 +147,13 @@ class ImageController extends Controller
             $images = $images->inRandomOrder()->take($limit);
         }
 
-        return $images->with('imageTopics')->get();
+        $finalRes = $images->with('imageTopics')->get();
+
+        if(isset($mustIncludeTheseImages)){
+            $imagesToAdd = Image::whereIn('id', $mustIncludeTheseImages)->with('imageTopics')->get();
+            $finalRes = $imagesToAdd->merge($finalRes);
+        }
+
+        return $finalRes;
     }
 }
