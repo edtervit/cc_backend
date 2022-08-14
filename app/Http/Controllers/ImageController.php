@@ -156,4 +156,8 @@ class ImageController extends Controller
 
         return $finalRes;
     }
+
+    public function getImageTopics() {
+        return ImageTopics::all();
+    }
 }

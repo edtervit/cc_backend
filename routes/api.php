@@ -33,6 +33,7 @@ Route::get('subjects', [SubjectsController::class, 'getSubjects']);
 
 //images
 Route::get('images', [ImageController::class, 'getImages']);
+Route::get('topics', [ImageController::class, 'getImageTopics']);
 
 
 //keep disabled on prod until auth ready
