@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ColourSchemesController;
+use App\Http\Controllers\ImageController;
 use App\Http\Controllers\MessagesController;
 use App\Http\Controllers\SubjectsController;
 use Illuminate\Http\Request;
@@ -29,6 +30,11 @@ Route::get('colour-schemes', [ColourSchemesController::class, 'getColours']);
 
 //subjects
 Route::get('subjects', [SubjectsController::class, 'getSubjects']);
+
+//images
+Route::get('images', [ImageController::class, 'getImages']);
+Route::get('topics', [ImageController::class, 'getImageTopics']);
+
 
 //keep disabled on prod until auth ready
 // Route::get('color-schemes/scrape', [ColourSchemesController::class, 'scrapeColourSchemes']);
